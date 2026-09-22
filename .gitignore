@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Raw data is downloadable; do not commit
+data/raw/
+data/processed/
+
+# Debug scratch
+_diag.py
+artifacts/_diag.json
+artifacts/*.log
+artifacts/*_check.json
+
+.trash/

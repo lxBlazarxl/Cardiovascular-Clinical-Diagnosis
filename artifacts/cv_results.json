@@ -1,0 +1,67 @@
+{
+  "cv": {
+    "logistic_regression": {
+      "roc_auc": 0.9101596771363397,
+      "pr_auc": 0.9024529495857112,
+      "sensitivity": 0.7913669064748201,
+      "specificity": 0.9024390243902439,
+      "brier": 0.11601927760708454
+    },
+    "random_forest": {
+      "roc_auc": 0.905202667134585,
+      "pr_auc": 0.9006417967554422,
+      "sensitivity": 0.7553956834532374,
+      "specificity": 0.8963414634146342,
+      "brier": 0.12577308075286386
+    },
+    "xgboost": {
+      "roc_auc": 0.8985348306720478,
+      "pr_auc": 0.8923890825245694,
+      "sensitivity": 0.7985611510791367,
+      "specificity": 0.8536585365853658,
+      "brier": 0.13066348433494568
+    }
+  },
+  "best": "logistic_regression",
+  "artifact": {
+    "best_name": "logistic_regression",
+    "threshold": 0.319,
+    "threshold_metrics": {
+      "threshold": 0.319,
+      "sensitivity": 0.9136690647482014,
+      "specificity": 0.7926829268292683
+    },
+    "metrics": {
+      "roc_auc": 0.9349885944902615,
+      "pr_auc": 0.9289880900274347,
+      "brier": 0.10012691567959167,
+      "brier_uncalibrated": 0.09897410216349488
+    },
+    "feature_names": [
+      "age",
+      "trestbps",
+      "chol",
+      "thalach",
+      "oldpeak",
+      "ca",
+      "rpp",
+      "hr_reserve",
+      "cp_1.0",
+      "cp_2.0",
+      "cp_3.0",
+      "cp_4.0",
+      "restecg_0.0",
+      "restecg_1.0",
+      "restecg_2.0",
+      "slope_1.0",
+      "slope_2.0",
+      "slope_3.0",
+      "thal_3.0",
+      "thal_6.0",
+      "thal_7.0",
+      "sex",
+      "fbs",
+      "exang"
+    ]
+  }
+}

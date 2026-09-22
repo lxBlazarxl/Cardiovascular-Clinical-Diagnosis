@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CardioAI — Coronary Artery Disease Risk Stratification</title>
+<meta name="description" content="Non-invasive coronary artery disease risk stratification with calibrated probabilities and per-patient feature attributions. Research prototype; not for clinical use.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#patient-form">Skip to patient parameters</a>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">C</div>
+    <div>
+      <h1>Cardiovascular Clinical Diagnosis</h1>
+      <p class="subtitle">Non-invasive coronary artery disease risk stratification with explainable AI</p>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pill">Research prototype</span>
+    <span class="pill pill--muted">Not for clinical use</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="panel form-panel" aria-labelledby="input-heading">
+    <div class="panel-head">
+      <h2 id="input-heading">Patient parameters</h2>
+      <div class="samples">
+        <button type="button" class="ghost" onclick="sample('high')">High-risk example</button>
+        <button type="button" class="ghost" onclick="sample('low')">Low-risk example</button>
+      </div>
+    </div>
+
+    <form id="patient-form" onsubmit="return false;">
+      <fieldset>
+        <legend>Demographics</legend>
+        <div class="field field--range">
+          <label for="age">Age <output id="agev">58</output></label>
+          <input id="age" type="range" min="20" max="100" step="1" value="58">
+        </div>
+        <div class="field">
+          <span class="label">Biological sex</span>
+          <div class="toggle" id="sex" data-value="1">
+            <button type="button" data-v="1" class="on">Male</button>
+            <button type="button" data-v="0">Female</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Symptoms &amp; history</legend>
+        <div class="field">
+          <label for="cp">Chest pain type</label>
+          <select id="cp">
+            <option value="1">Typical angina</option>
+            <option value="2">Atypical angina</option>
+            <option value="3">Non-anginal pain</option>
+            <option value="4" selected>Asymptomatic</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="label">Exercise-induced angina</span>
+          <div class="toggle" id="exang" data-value="1">
+            <button type="button" data-v="0">No</button>
+            <button type="button" data-v="1" class="on">Yes</button>
+          </div>
+        </div>
+        <div class="field field--full">
+          <span class="label">Fasting blood sugar &gt; 120 mg/dl</span>
+          <div class="toggle" id="fbs" data-value="0">
+            <button type="button" data-v="0" class="on">No</button>
+            <button type="button" data-v="1">Yes</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Vitals &amp; laboratory values</legend>
+        <div class="field field--range">
+          <label for="trestbps">Resting blood pressure <output id="trestbpsv">158</output> mmHg</label>
+          <input id="trestbps" type="range" min="80" max="220" step="1" value="158">
+        </div>
+        <div class="field field--range">
+          <label for="chol">Serum cholesterol <output id="cholv">285</output> mg/dl</label>
+          <input id="chol" type="range" min="100" max="600" step="1" value="285">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Diagnostic tests</legend>
+        <div class="field">
+          <label for="restecg">Resting ECG</label>
+          <select id="restecg">
+            <option value="0">Normal</option>
+            <option value="1">ST-T wave abnormality</option>
+            <option value="2" selected>Left ventricular hypertrophy</option>
+          </select>
+        </div>
+        <div class="field field--range">
+          <label for="thalach">Maximum heart rate <output id="thalachv">118</output> bpm</label>
+          <input id="thalach" type="range" min="60" max="220" step="1" value="118">
+        </div>
+        <div class="field field--range">
+          <label for="oldpeak">ST depression <output id="oldpeakv">2.6</output> mm</label>
+          <input id="oldpeak" type="range" min="0" max="7" step="0.1" value="2.6">
+        </div>
+        <div class="field">
+          <label for="slope">ST slope</label>
+          <select id="slope">
+            <option value="1">Upsloping</option>
+            <option value="2" selected>Flat</option>
+            <option value="3">Downsloping</option>
+          </select>
+        </div>
+        <div class="field field--range">
+          <label for="ca">Major vessels involved <output id="cav">2</output></label>
+          <input id="ca" type="range" min="0" max="3" step="1" value="2">
+        </div>
+        <div class="field">
+          <label for="thal">Thallium perfusion scan</label>
+          <select id="thal">
+            <option value="3">Normal</option>
+            <option value="6">Fixed defect</option>
+            <option value="7" selected>Reversible defect</option>
+          </select>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+
+  <section class="panel result-panel" aria-labelledby="result-heading">
+    <h2 id="result-heading">Risk assessment</h2>
+
+    <div class="verdict high" id="verdict" role="status" aria-live="polite">
+      <div class="vtitle" id="vtitle">—</div>
+      <div class="vdesc" id="vdesc"></div>
+      <div class="score">
+        <span class="big" id="vprob">--%</span>
+        <div class="score-meta">
+          <span>Model probability <b id="sprob">--%</b></span>
+          <span>Referral threshold <b id="sthr">--%</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="track" aria-hidden="true">
+      <div class="thr" id="thr"></div>
+      <div class="marker" id="marker"></div>
+      <div class="thrlabel" id="thrlabel"></div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="on" data-t="explain">Feature attributions</button>
+      <button type="button" data-t="simulate">What-if analysis</button>
+    </div>
+
+    <div class="tabpane on" id="pane-explain">
+      <h3>Leading contributing factors</h3>
+      <div class="contrib" id="contrib"></div>
+      <p class="summary" id="summary"></p>
+    </div>
+
+    <div class="tabpane" id="pane-simulate">
+      <h3>Modifiable-factor simulation</h3>
+      <div class="cf">
+        <div class="cf-controls">
+          <label for="cbp">Target resting blood pressure <output id="cbpv">140 mmHg</output></label>
+          <input id="cbp" type="range" min="90" max="180" step="1" value="140">
+          <label for="cchol">Target cholesterol <output id="ccholv">200 mg/dl</output></label>
+          <input id="cchol" type="range" min="120" max="320" step="1" value="200">
+        </div>
+        <div class="cf-bars" aria-hidden="true">
+          <div class="cf-col"><div class="cf-bar" id="b1"></div><span id="n1">--%</span><em>current</em></div>
+          <div class="cf-col"><div class="cf-bar" id="b2"></div><span id="n2">--%</span><em>modelled</em></div>
+        </div>
+      </div>
+      <p class="note info" id="cfnote"></p>
+    </div>
+
+    <p class="disclaimer">Research and educational prototype. Calibrated probabilities are not a diagnosis and must not be used for clinical decision-making.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>CardioAI · UCI Cleveland Heart Disease dataset · Logistic regression with Platt scaling · Per-patient feature attribution</p>
+</footer>
+
+<script src="model.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
