@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CardioAI — Coronary Artery Disease Risk Stratification</title>
+<meta name="description" content="Non-invasive coronary artery disease risk stratification with calibrated probabilities and per-patient feature attributions. Research prototype; not for clinical use.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* styles.css — clinical / academic dashboard theme */
+:root{
+  --bg:#f4f6f9;
+  --surface:#ffffff;
+  --surface-alt:#f8fafc;
+  --ink:#111827;
+  --ink-soft:#374151;
+  --muted:#6b7280;
+  --line:#dde3ea;
+  --line-strong:#c4cdd8;
+  --primary:#1f4e79;
+  --primary-dark:#173a5a;
+  --primary-soft:#eaf1f8;
+  --accent:#0e7490;
+  --danger:#b42318;
+  --danger-soft:#fdeceb;
+  --warn:#b54708;
+  --warn-soft:#fef4e6;
+  --ok:#067647;
+  --ok-soft:#e9f7f0;
+  --radius:10px;
+  --radius-sm:7px;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 1px 3px rgba(16,24,40,.08), 0 1px 2px rgba(16,24,40,.04);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+
+*{box-sizing:border-box;}
+
+html{scroll-behavior:smooth;}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font);
+  font-size:15px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em;}
+
+.skip-link{
+  position:absolute;left:-9999px;top:0;z-index:100;
+  background:var(--primary);color:#fff;padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  font-weight:600;text-decoration:none;
+}
+.skip-link:focus{left:0;top:0;}
+
+/* ---------- header ---------- */
+.topbar{
+  display:flex;justify-content:space-between;align-items:center;gap:1.5rem;flex-wrap:wrap;
+  padding:1.1rem 1.75rem;
+  background:var(--surface);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:.9rem;}
+.mark{
+  width:42px;height:42px;flex:0 0 auto;
+  display:grid;place-items:center;
+  background:var(--primary);color:#fff;
+  border-radius:var(--radius-sm);
+  font-weight:700;font-size:1.15rem;
+  letter-spacing:-.02em;
+}
+.brand h1{font-size:1.3rem;color:var(--ink);}
+.subtitle{margin:.1rem 0 0;font-size:.85rem;color:var(--muted);max-width:60ch;}
+.meta{display:flex;gap:.5rem;flex-wrap:wrap;}
+.pill{
+  display:inline-block;padding:.25rem .6rem;border-radius:999px;
+  font-size:.7rem;font-weight:600;letter-spacing:.02em;text-transform:uppercase;
+  background:var(--primary-soft);color:var(--primary-dark);
+  border:1px solid #cfe0ef;
+}
+.pill--muted{background:#f1f3f6;color:var(--muted);border-color:var(--line);}
+
+/* ---------- layout ---------- */
+.layout{
+  display:grid;
+  grid-template-columns:minmax(340px,1.05fr) minmax(340px,.95fr);
+  gap:1.5rem;
+  padding:1.75rem;
+  max-width:1240px;
+  margin:0 auto;
+  align-items:start;
+}
+@media(max-width:920px){.layout{grid-template-columns:1fr;padding:1rem;}}
+
+.panel{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:1.4rem;
+}
+.panel h2{
+  font-size:1.05rem;color:var(--ink);
+  padding-bottom:.6rem;margin-bottom:1rem;
+  border-bottom:1px solid var(--line);
+}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;}
+.panel-head h2{margin-bottom:0;padding-bottom:.6rem;border-bottom:none;}
+.panel h3{font-size:.9rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:1.1rem 0 .7rem;}
+.samples{display:flex;gap:.5rem;flex-wrap:wrap;}
+
+/* ---------- form ---------- */
+form#patient-form{display:flex;flex-direction:column;gap:1rem;}
+fieldset{
+  display:grid;grid-template-columns:1fr 1fr;gap:.9rem 1.1rem;
+  margin:0;padding:1rem 1.05rem 1.15rem;
+  background:var(--surface-alt);
+  border:1px solid var(--line);
+  border-radius:var(--radius-sm);
+}
+fieldset legend{
+  font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--primary-dark);padding:0 .35rem;
+}
+.field{display:flex;flex-direction:column;gap:.35rem;min-width:0;}
+.field--full{grid-column:1 / -1;}
+.field label,.field .label{
+  font-size:.76rem;font-weight:600;color:var(--ink-soft);
+}
+.field label{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;}
+.field output{font-family:var(--mono);font-size:.8rem;color:var(--primary-dark);font-weight:600;}
+
+input,select{
+  width:100%;padding:.5rem .6rem;font:inherit;font-size:.88rem;color:var(--ink);
+  background:#fff;border:1px solid var(--line-strong);border-radius:var(--radius-sm);
+  outline:none;transition:border-color .12s ease,box-shadow .12s ease;
+}
+select{cursor:pointer;}
+input:focus,select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(31,78,121,.12);}
+
+/* range inputs */
+input[type="range"]{
+  -webkit-appearance:none;appearance:none;padding:0;height:20px;
+  background:transparent;border:none;box-shadow:none;cursor:pointer;
+}
+input[type="range"]:focus{box-shadow:none;}
+input[type="range"]::-webkit-slider-runnable-track{height:5px;background:#dbe2ea;border-radius:999px;}
+input[type="range"]::-moz-range-track{height:5px;background:#dbe2ea;border-radius:999px;}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;margin-top:-6px;
+  width:16px;height:16px;border-radius:50%;
+  background:#fff;border:2px solid var(--primary);box-shadow:var(--shadow-sm);
+}
+input[type="range"]::-moz-range-thumb{
+  width:16px;height:16px;border-radius:50%;background:#fff;
+  border:2px solid var(--primary);box-shadow:var(--shadow-sm);
+}
+
+/* segmented toggles */
+.toggle{display:flex;border:1px solid var(--line-strong);border-radius:var(--radius-sm);overflow:hidden;background:#fff;}
+.toggle button{
+  flex:1;border:none;border-radius:0;background:#fff;color:var(--ink-soft);
+  padding:.45rem .5rem;font-size:.8rem;font-weight:600;text-transform:none;letter-spacing:0;
+  box-shadow:none;
+}
+.toggle button + button{border-left:1px solid var(--line);}
+.toggle button:hover{background:var(--surface-alt);transform:none;box-shadow:none;}
+.toggle button.on{background:var(--primary);color:#fff;}
+
+/* ---------- buttons ---------- */
+button{
+  font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer;
+  padding:.55rem 1rem;border-radius:var(--radius-sm);
+  color:#fff;background:var(--primary);border:1px solid var(--primary);
+  transition:background .12s ease,box-shadow .12s ease;
+}
+button:hover{background:var(--primary-dark);box-shadow:var(--shadow-sm);}
+button:active{background:var(--primary-dark);}
+button:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(31,78,121,.2);}
+button.ghost{
+  background:#fff;color:var(--primary-dark);border:1px solid var(--line-strong);
+  font-size:.78rem;padding:.4rem .7rem;
+}
+button.ghost:hover{background:var(--primary-soft);border-color:var(--primary);}
+
+/* ---------- verdict ---------- */
+.result-panel{display:flex;flex-direction:column;gap:1.05rem;}
+.verdict{
+  border:1px solid var(--line);border-left-width:5px;
+  border-radius:var(--radius-sm);padding:1.1rem 1.2rem;
+  background:var(--surface-alt);
+}
+.verdict.high{border-left-color:var(--danger);background:var(--danger-soft);}
+.verdict.mid{border-left-color:var(--warn);background:var(--warn-soft);}
+.verdict.low{border-left-color:var(--ok);background:var(--ok-soft);}
+.vtitle{font-size:1.2rem;font-weight:700;letter-spacing:-.01em;}
+.verdict.high .vtitle{color:var(--danger);}
+.verdict.mid .vtitle{color:var(--warn);}
+.verdict.low .vtitle{color:var(--ok);}
+.vdesc{margin-top:.3rem;font-size:.85rem;color:var(--ink-soft);max-width:62ch;}
+.score{display:flex;align-items:baseline;gap:1.1rem;flex-wrap:wrap;margin-top:.85rem;}
+.score .big{font-family:var(--mono);font-size:2.3rem;font-weight:600;line-height:1;color:var(--ink);}
+.score-meta{display:flex;flex-direction:column;gap:.15rem;font-size:.76rem;color:var(--muted);}
+.score-meta b{font-family:var(--mono);color:var(--ink-soft);}
+
+/* score track */
+.track{position:relative;height:8px;background:#e6ebf1;border-radius:999px;margin:1.4rem 0 .2rem;}
+.track .thr{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink-soft);border-radius:2px;}
+.track .marker{position:absolute;top:-6px;width:4px;height:20px;background:var(--primary);border-radius:2px;box-shadow:var(--shadow-sm);}
+.track .thrlabel{position:absolute;top:16px;font-size:.66rem;font-weight:600;color:var(--muted);transform:translateX(-50%);white-space:nowrap;}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:1.1rem;flex-wrap:wrap;margin-top:1.6rem;border-bottom:1px solid var(--line);}
+.tabs button{
+  background:none;border:none;border-radius:0;box-shadow:none;
+  color:var(--muted);font-size:.82rem;font-weight:600;
+  padding:.5rem .1rem;border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.tabs button:hover{color:var(--primary-dark);background:none;box-shadow:none;}
+.tabs button.on{color:var(--primary-dark);border-bottom-color:var(--primary);}
+.tabpane{display:none;}
+.tabpane.on{display:block;}
+
+/* ---------- contributions ---------- */
+.contrib{display:flex;flex-direction:column;gap:.55rem;}
+.contrib .row{display:grid;grid-template-columns:minmax(130px,1.1fr) 2fr minmax(60px,auto);gap:.65rem;align-items:center;}
+.contrib .name{font-size:.75rem;font-weight:500;color:var(--ink-soft);}
+.contrib .bwrap{position:relative;height:12px;background:#eef1f5;border-radius:999px;overflow:hidden;}
+.contrib .mid{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line-strong);}
+.contrib .bar{position:absolute;top:0;bottom:0;}
+.contrib .bar.up{left:50%;background:#dc6b62;border-radius:0 999px 999px 0;}
+.contrib .bar.dn{right:50%;background:#5aa9c9;border-radius:999px 0 0 999px;}
+.contrib .amt{font-family:var(--mono);font-size:.72rem;text-align:right;color:var(--ink-soft);}
+.summary{
+  font-size:.82rem;color:var(--ink-soft);
+  background:var(--surface-alt);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:.7rem .8rem;margin:.9rem 0 0;
+}
+.summary b{color:var(--ink);}
+
+/* ---------- counterfactual ---------- */
+.cf{display:grid;grid-template-columns:1fr auto;gap:1.2rem;align-items:end;}
+@media(max-width:540px){.cf{grid-template-columns:1fr;}}
+.cf-controls{display:flex;flex-direction:column;gap:.5rem;}
+.cf-controls label{display:flex;justify-content:space-between;gap:.5rem;font-size:.76rem;font-weight:600;color:var(--ink-soft);}
+.cf-controls output{font-family:var(--mono);color:var(--primary-dark);}
+.cf-bars{display:flex;gap:1.2rem;align-items:flex-end;height:210px;padding-top:.5rem;}
+.cf-col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.4rem;width:62px;}
+.cf-bar{width:38px;min-height:4px;border-radius:4px 4px 0 0;transition:height .25s ease,background .25s ease;}
+.cf-col span{font-family:var(--mono);font-size:.78rem;font-weight:600;}
+.cf-col em{font-style:normal;font-size:.64rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);}
+
+/* ---------- notes ---------- */
+.note{
+  font-size:.8rem;color:var(--ink-soft);
+  border:1px solid var(--line);border-left-width:4px;border-radius:var(--radius-sm);
+  padding:.65rem .8rem;margin:.9rem 0 0;background:var(--surface-alt);
+}
+.note.ok{border-left-color:var(--ok);background:var(--ok-soft);}
+.note.bad{border-left-color:var(--danger);background:var(--danger-soft);}
+.note.info{border-left-color:var(--primary);}
+
+.disclaimer{
+  margin:.4rem 0 0;font-size:.72rem;line-height:1.5;color:var(--muted);
+  border-top:1px solid var(--line);padding-top:.8rem;
+}
+
+/* ---------- footer ---------- */
+.footer{
+  text-align:center;padding:1.2rem;font-size:.74rem;color:var(--muted);
+  border-top:1px solid var(--line);background:var(--surface);
+}
+.footer p{margin:0;}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important;}
+}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#patient-form">Skip to patient parameters</a>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="mark" aria-hidden="true">C</div>
+    <div>
+      <h1>Cardiovascular Clinical Diagnosis</h1>
+      <p class="subtitle">Non-invasive coronary artery disease risk stratification with explainable AI</p>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pill">Research prototype</span>
+    <span class="pill pill--muted">Not for clinical use</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="panel form-panel" aria-labelledby="input-heading">
+    <div class="panel-head">
+      <h2 id="input-heading">Patient parameters</h2>
+      <div class="samples">
+        <button type="button" class="ghost" onclick="sample('high')">High-risk example</button>
+        <button type="button" class="ghost" onclick="sample('low')">Low-risk example</button>
+      </div>
+    </div>
+
+    <form id="patient-form" onsubmit="return false;">
+      <fieldset>
+        <legend>Demographics</legend>
+        <div class="field field--range">
+          <label for="age">Age <output id="agev">58</output></label>
+          <input id="age" type="range" min="20" max="100" step="1" value="58">
+        </div>
+        <div class="field">
+          <span class="label">Biological sex</span>
+          <div class="toggle" id="sex" data-value="1">
+            <button type="button" data-v="1" class="on">Male</button>
+            <button type="button" data-v="0">Female</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Symptoms &amp; history</legend>
+        <div class="field">
+          <label for="cp">Chest pain type</label>
+          <select id="cp">
+            <option value="1">Typical angina</option>
+            <option value="2">Atypical angina</option>
+            <option value="3">Non-anginal pain</option>
+            <option value="4" selected>Asymptomatic</option>
+          </select>
+        </div>
+        <div class="field">
+          <span class="label">Exercise-induced angina</span>
+          <div class="toggle" id="exang" data-value="1">
+            <button type="button" data-v="0">No</button>
+            <button type="button" data-v="1" class="on">Yes</button>
+          </div>
+        </div>
+        <div class="field field--full">
+          <span class="label">Fasting blood sugar &gt; 120 mg/dl</span>
+          <div class="toggle" id="fbs" data-value="0">
+            <button type="button" data-v="0" class="on">No</button>
+            <button type="button" data-v="1">Yes</button>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Vitals &amp; laboratory values</legend>
+        <div class="field field--range">
+          <label for="trestbps">Resting blood pressure <output id="trestbpsv">158</output> mmHg</label>
+          <input id="trestbps" type="range" min="80" max="220" step="1" value="158">
+        </div>
+        <div class="field field--range">
+          <label for="chol">Serum cholesterol <output id="cholv">285</output> mg/dl</label>
+          <input id="chol" type="range" min="100" max="600" step="1" value="285">
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Diagnostic tests</legend>
+        <div class="field">
+          <label for="restecg">Resting ECG</label>
+          <select id="restecg">
+            <option value="0">Normal</option>
+            <option value="1">ST-T wave abnormality</option>
+            <option value="2" selected>Left ventricular hypertrophy</option>
+          </select>
+        </div>
+        <div class="field field--range">
+          <label for="thalach">Maximum heart rate <output id="thalachv">118</output> bpm</label>
+          <input id="thalach" type="range" min="60" max="220" step="1" value="118">
+        </div>
+        <div class="field field--range">
+          <label for="oldpeak">ST depression <output id="oldpeakv">2.6</output> mm</label>
+          <input id="oldpeak" type="range" min="0" max="7" step="0.1" value="2.6">
+        </div>
+        <div class="field">
+          <label for="slope">ST slope</label>
+          <select id="slope">
+            <option value="1">Upsloping</option>
+            <option value="2" selected>Flat</option>
+            <option value="3">Downsloping</option>
+          </select>
+        </div>
+        <div class="field field--range">
+          <label for="ca">Major vessels involved <output id="cav">2</output></label>
+          <input id="ca" type="range" min="0" max="3" step="1" value="2">
+        </div>
+        <div class="field">
+          <label for="thal">Thallium perfusion scan</label>
+          <select id="thal">
+            <option value="3">Normal</option>
+            <option value="6">Fixed defect</option>
+            <option value="7" selected>Reversible defect</option>
+          </select>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+
+  <section class="panel result-panel" aria-labelledby="result-heading">
+    <h2 id="result-heading">Risk assessment</h2>
+
+    <div class="verdict high" id="verdict" role="status" aria-live="polite">
+      <div class="vtitle" id="vtitle">—</div>
+      <div class="vdesc" id="vdesc"></div>
+      <div class="score">
+        <span class="big" id="vprob">--%</span>
+        <div class="score-meta">
+          <span>Model probability <b id="sprob">--%</b></span>
+          <span>Referral threshold <b id="sthr">--%</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="track" aria-hidden="true">
+      <div class="thr" id="thr"></div>
+      <div class="marker" id="marker"></div>
+      <div class="thrlabel" id="thrlabel"></div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="on" data-t="explain">Feature attributions</button>
+      <button type="button" data-t="simulate">What-if analysis</button>
+    </div>
+
+    <div class="tabpane on" id="pane-explain">
+      <h3>Leading contributing factors</h3>
+      <div class="contrib" id="contrib"></div>
+      <p class="summary" id="summary"></p>
+    </div>
+
+    <div class="tabpane" id="pane-simulate">
+      <h3>Modifiable-factor simulation</h3>
+      <div class="cf">
+        <div class="cf-controls">
+          <label for="cbp">Target resting blood pressure <output id="cbpv">140 mmHg</output></label>
+          <input id="cbp" type="range" min="90" max="180" step="1" value="140">
+          <label for="cchol">Target cholesterol <output id="ccholv">200 mg/dl</output></label>
+          <input id="cchol" type="range" min="120" max="320" step="1" value="200">
+        </div>
+        <div class="cf-bars" aria-hidden="true">
+          <div class="cf-col"><div class="cf-bar" id="b1"></div><span id="n1">--%</span><em>current</em></div>
+          <div class="cf-col"><div class="cf-bar" id="b2"></div><span id="n2">--%</span><em>modelled</em></div>
+        </div>
+      </div>
+      <p class="note info" id="cfnote"></p>
+    </div>
+
+    <p class="disclaimer">Research and educational prototype. Calibrated probabilities are not a diagnosis and must not be used for clinical decision-making.</p>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>CardioAI · UCI Cleveland Heart Disease dataset · Logistic regression with Platt scaling · Per-patient feature attribution</p>
+</footer>
+
+<script>
+window.__MODEL__ = {"feature_names":["age","trestbps","chol","thalach","oldpeak","ca","rpp","hr_reserve","cp_1.0","cp_2.0","cp_3.0","cp_4.0","restecg_0.0","restecg_1.0","restecg_2.0","slope_1.0","slope_2.0","slope_3.0","thal_3.0","thal_6.0","thal_7.0","sex","fbs","exang"],"coef":[-0.06090396449700606,0.4141476852566963,0.21078290211171977,-0.2411964511405328,0.18122747671097275,1.137250011237457,-0.10066187146985645,-0.04644199955738965,-0.6566705889567634,0.16241801009371387,-0.4726782721886254,0.9666463821150352,-0.15458075277842306,-0.07128275365306326,0.2255790374948476,-0.4988074549833224,0.6195663189295797,-0.1210433328828961,-0.5396850644509761,-0.2519858005229237,0.7913863960372598,0.7260344121746798,-0.1078986996134363,0.29516385312186044],"intercept":-0.4595203099572489,"classes":[0,1],"calibrator_coef":[0.8899648322571224],"calibrator_intercept":-0.04217773077704596,"threshold":0.355,"num_cols":["age","trestbps","chol","thalach","oldpeak","ca","rpp","hr_reserve"],"num_mean":[54.549586776859506,130.95867768595042,249.8388429752066,149.96280991735537,0.9991735537190083,0.6074380165289256,196.26971074380168,0.9061584401563104],"num_scale":[8.978372765440131,17.58610302878636,52.737566192586975,22.639527461380734,1.1206178835595506,0.8807083258655833,39.261583566270055,0.12654088681188153],"num_median":[56.0,130.0,244.5,153.5,0.8,0.0,198.2,0.9357999250655676],"bin_cols":["sex","fbs","exang"],"bin_mean":[0.6818181818181818,0.1446280991735537,0.32644628099173556],"bin_scale":[0.46577048936179993,0.35172547832506873,0.4689126854952853],"bin_median":[1.0,0.0,0.0],"cat_cols":["cp","restecg","slope","thal"],"cat_categories":[[1.0,2.0,3.0,4.0],[0.0,1.0,2.0],[1.0,2.0,3.0],[3.0,6.0,7.0]],"metrics":{"model":"logistic_regression","threshold":0.355,"n_test":61,"roc_auc":0.9577922077922079,"pr_auc":0.9407883021856493,"sensitivity":0.9642857142857143,"specificity":0.7272727272727273,"brier_calibrated":0.08620931037001911}};
+</script>
+<script>
+const M = window.__MODEL__;
+const $ = id => document.getElementById(id);
+const state = { age:58, sex:1, cp:4, trestbps:158, chol:285, fbs:0, restecg:2,
+  thalach:118, exang:1, oldpeak:2.6, slope:2, ca:2, thal:7 };
+const PRETTY = { age:'Age', trestbps:'Resting blood pressure', chol:'Cholesterol',
+  thalach:'Max heart rate', oldpeak:'ST depression', ca:'Blocked vessels (fluoroscopy)',
+  rpp:'Rate-pressure product', hr_reserve:'Heart-rate reserve', sex:'Male sex',
+  fbs:'High fasting blood sugar', exang:'Exercise-induced angina' };
+const CP = { 'cp_1.0':'Chest pain: typical angina','cp_2.0':'Chest pain: atypical angina',
+  'cp_3.0':'Chest pain: non-anginal','cp_4.0':'Chest pain: asymptomatic',
+  'restecg_0.0':'ECG: normal','restecg_1.0':'ECG: ST-T abnormality','restecg_2.0':'ECG: LV hypertrophy',
+  'slope_1.0':'ST slope: upsloping','slope_2.0':'ST slope: flat','slope_3.0':'ST slope: downsloping',
+  'thal_3.0':'Thallium: normal','thal_6.0':'Thallium: fixed defect','thal_7.0':'Thallium: reversible defect' };
+Object.assign(PRETTY, CP);
+const pretty = n => PRETTY[n] || n;
+
+function read() {
+  state.age=+$('age').value; state.trestbps=+$('trestbps').value;
+  state.chol=+$('chol').value; state.thalach=+$('thalach').value;
+  state.oldpeak=+$('oldpeak').value; state.ca=+$('ca').value;
+  state.cp=+$('cp').value; state.restecg=+$('restecg').value;
+  state.slope=+$('slope').value; state.thal=+$('thal').value;
+  state.sex=parseInt($('sex').dataset.value,10);
+  state.fbs=parseInt($('fbs').dataset.value,10);
+  state.exang=parseInt($('exang').dataset.value,10);
+}
+function vector(s) {
+  const rpp=(s.trestbps*s.thalach)/100, hr=s.thalach/(220-s.age);
+  return { age:s.age,trestbps:s.trestbps,chol:s.chol,thalach:s.thalach,oldpeak:s.oldpeak,ca:s.ca,rpp:rpp,hr_reserve:hr,
+    'cp_1.0':s.cp===1?1:0,'cp_2.0':s.cp===2?1:0,'cp_3.0':s.cp===3?1:0,'cp_4.0':s.cp===4?1:0,
+    'restecg_0.0':s.restecg===0?1:0,'restecg_1.0':s.restecg===1?1:0,'restecg_2.0':s.restecg===2?1:0,
+    'slope_1.0':s.slope===1?1:0,'slope_2.0':s.slope===2?1:0,'slope_3.0':s.slope===3?1:0,
+    'thal_3.0':s.thal===3?1:0,'thal_6.0':s.thal===6?1:0,'thal_7.0':s.thal===7?1:0, sex:s.sex,fbs:s.fbs,exang:s.exang };
+}
+
+function predict(s) {
+  const raw=vector(s), names=M.feature_names;
+  let z=M.intercept; const contrib=[];
+  for (let i=0;i<names.length;i++){
+    const n=names[i]; let x=raw[n]||0;
+    const ni=M.num_cols.indexOf(n), bi=M.bin_cols.indexOf(n);
+    if (ni>=0) x=(x-M.num_mean[ni])/M.num_scale[ni];
+    else if (bi>=0) x=(x-M.bin_mean[bi])/M.bin_scale[bi];
+    const c=M.coef[i]*x; z+=c; contrib.push({name:n,value:c});
+  }
+  const cz=M.calibrator_coef[0]*z+M.calibrator_intercept;
+  return {p:1/(1+Math.exp(-cz)),contrib:contrib};
+}
+
+function render() {
+  read();
+  const r=predict(state), p=r.p, contrib=r.contrib, thr=M.threshold;
+  const high=p>=thr, mid=!high&&p>=0.25;
+  $('verdict').className='verdict '+(high?'high':mid?'mid':'low');
+  $('vtitle').textContent=high?'HIGH RISK':mid?'MODERATE RISK':'LOW RISK';
+  $('vdesc').textContent=high?'This profile meets the referral threshold. Invasive coronary angiography should be considered.'
+    :mid?'Below the referral threshold but worth monitoring. Continue risk-factor control and follow-up.'
+    :'This profile is well below the referral threshold. Routine non-invasive monitoring is appropriate.';
+  $('vprob').textContent=(p*100).toFixed(1)+'%'; $('sprob').textContent=(p*100).toFixed(1)+'%';
+  $('sthr').textContent=(thr*100).toFixed(1)+'%';
+  $('marker').style.left='calc('+(p*100).toFixed(1)+'% - 2px)';
+  $('thr').style.left=(thr*100).toFixed(1)+'%';
+  $('thrlabel').textContent='threshold '+(thr*100).toFixed(1)+'%';
+  const top=contrib.slice().sort((a,b)=>Math.abs(b.value)-Math.abs(a.value)).slice(0,10);
+  const scale=Math.max(...top.map(c=>Math.abs(c.value)),1e-6);
+  $('contrib').innerHTML=top.map(c=>{
+    const w=Math.abs(c.value)/scale*50, up=c.value>0;
+    return '<div class="row"><div class="name">'+pretty(c.name)+'</div>'
+      +'<div class="bwrap"><div class="mid"></div>'
+      +'<div class="bar '+(up?'up':'dn')+'" style="width:'+w.toFixed(1)+'%"></div></div>'
+      +'<div class="amt">'+(c.value>=0?'+':'')+c.value.toFixed(3)+'</div></div>';
+  }).join('');
+  const ups=top.filter(c=>c.value>0).slice(0,3).map(c=>pretty(c.name));
+  const dns=top.filter(c=>c.value<0).slice(0,3).map(c=>pretty(c.name));
+  $('summary').innerHTML=(ups.length?'<b>Increasing risk:</b> '+ups.join(', '):'')
+    +(ups.length&&dns.length?'<br>':'')+(dns.length?'<b>Decreasing risk:</b> '+dns.join(', '):'');
+}
+
+function simulate() {
+  read();
+  const bp=+$('cbp').value, ch=+$('cchol').value;
+  $('cbpv').textContent=bp+' mmHg'; $('ccholv').textContent=ch+' mg/dl';
+  const before=predict(state).p, after=predict(Object.assign({},state,{trestbps:bp,chol:ch})).p;
+  const col=p=>p>=0.5?'#ef4444':p>=0.25?'#f59e0b':'#22c55e';
+  $('b1').style.height=Math.max(before*220,4)+'px'; $('b1').style.background=col(before);
+  $('b2').style.height=Math.max(after*220,4)+'px'; $('b2').style.background=col(after);
+  $('n1').textContent=(before*100).toFixed(1)+'%'; $('n2').textContent=(after*100).toFixed(1)+'%';
+  const d=before-after, note=$('cfnote');
+  if (d>0.001){ note.className='note ok'; note.textContent='Modelled risk falls '+(d*100).toFixed(1)+' percentage points ('+(d/before*100).toFixed(1)+'% relative reduction).'; }
+  else if (d<-0.001){ note.className='note bad'; note.textContent='These targets would raise modelled risk by '+(Math.abs(d)*100).toFixed(1)+' points.'; }
+  else { note.className='note info'; note.textContent='These targets leave modelled risk essentially unchanged.'; }
+}
+
+function sample(which) {
+  const s=which==='high'
+    ?{age:58,sex:1,cp:4,trestbps:158,chol:285,fbs:0,restecg:2,thalach:118,exang:1,oldpeak:2.6,slope:2,ca:2,thal:7}
+    :{age:41,sex:0,cp:2,trestbps:118,chol:168,fbs:0,restecg:0,thalach:176,exang:0,oldpeak:0,slope:1,ca:0,thal:3};
+  ['age','trestbps','chol','thalach','oldpeak','ca','cp','restecg','slope','thal'].forEach(k=>{
+    $(k).value=s[k]; const lbl=$(k+'v'); if (lbl) lbl.textContent=s[k]; });
+  setToggle('sex',s.sex); setToggle('fbs',s.fbs); setToggle('exang',s.exang);
+  $('cbp').value=Math.min(s.trestbps,140); $('cchol').value=Math.min(s.chol,200);
+  render(); simulate();
+}
+function setToggle(id,v){
+  const b=$(id); b.dataset.value=v;
+  b.querySelectorAll('button').forEach(x=>x.classList.toggle('on',+x.dataset.v===v));
+}
+function tab(id){
+  document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===id));
+  document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+id));
+}
+
+function init(){
+  ['age','trestbps','chol','thalach','oldpeak','ca'].forEach(k=>{
+    const i=$(k);
+    i.addEventListener('input',()=>{ $(k+'v').textContent=i.value; render(); });
+  });
+  ['cp','restecg','slope','thal'].forEach(k=>$(k).addEventListener('change',render));
+  ['sex','fbs','exang'].forEach(k=>{
+    $(k).querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ setToggle(k,+b.dataset.v); render(); }));
+  });
+  ['cbp','cchol'].forEach(k=>$(k).addEventListener('input',simulate));
+  document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>tab(b.dataset.t)));
+  render(); simulate();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
